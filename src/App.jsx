@@ -8,6 +8,7 @@ import Empresas from './pages/Empresas'
 import EmpresaDetalle from './pages/EmpresaDetalle'
 import ContactoDetalle from './pages/ContactoDetalle'
 import Tareas from './pages/Tareas'
+import LeadsFrios from './pages/LeadsFrios'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/empresas/:id" element={<EmpresaDetalle />} />
           <Route path="/contactos/:id" element={<ContactoDetalle />} />
           <Route path="/tareas" element={<Tareas />} />
+          <Route path="/leads-frios" element={<LeadsFrios />} />
         </Route>
       </Routes>
     </AuthProvider>
