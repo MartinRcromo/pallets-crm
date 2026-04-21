@@ -25,6 +25,17 @@ export const fmtDate = (d, fmtStr = "d 'de' MMM yyyy") => {
   }
 }
 
+// Parsea una fecha sin hora (columna Postgres `date`) en timezone LOCAL.
+// Supabase devuelve 'YYYY-MM-DD'; `new Date(string)` lo lee como UTC,
+// lo que genera drift de un día al renderizar en AR (UTC-3).
+export function parseDateOnly(dateString) {
+  if (!dateString) return null
+  const [datePart] = String(dateString).split('T')
+  const [y, m, d] = datePart.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return new Date(y, m - 1, d)
+}
+
 export const fmtDateTime = (d) => {
   if (!d) return '—'
   try {
