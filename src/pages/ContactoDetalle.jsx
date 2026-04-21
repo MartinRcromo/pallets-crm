@@ -8,9 +8,15 @@ import {
   SectorChip,
   SeniorityChip,
 } from '../components/ui/Badges'
+import InlineBadgeSelect from '../components/ui/InlineBadgeSelect'
 import InteraccionForm from '../components/InteraccionForm'
 import { cn, fmtDateTime, normalizeLinkedIn, toWhatsappNumber } from '../lib/utils'
-import { labelOf, TIPO_INTERACCION } from '../lib/constants'
+import {
+  labelOf,
+  TIPO_INTERACCION,
+  PRIORIDAD_CONTACTO,
+  ESTADO_CONTACTO,
+} from '../lib/constants'
 import {
   ArrowLeft,
   MessageCircle,
@@ -57,6 +63,15 @@ export default function ContactoDetalle() {
     setLoading(false)
   }
 
+  const updateContacto = async (patch) => {
+    const { error } = await supabase
+      .from('contacts')
+      .update(patch)
+      .eq('id', id)
+    if (error) throw error
+    setContacto((prev) => ({ ...prev, ...patch }))
+  }
+
   if (loading)
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 text-ink/40">
@@ -94,8 +109,20 @@ export default function ContactoDetalle() {
       <header className="mb-6">
         <div className="flex flex-wrap items-center gap-1.5 mb-2">
           {contacto.es_decisor && <DecisorPill />}
-          <PrioContactoBadge value={contacto.prioridad} />
-          <EstadoContactoBadge value={contacto.estado} />
+          <InlineBadgeSelect
+            value={contacto.prioridad}
+            options={PRIORIDAD_CONTACTO}
+            onChange={(v) => updateContacto({ prioridad: v })}
+            renderBadge={(v) => <PrioContactoBadge value={v} />}
+            title="Cambiar prioridad"
+          />
+          <InlineBadgeSelect
+            value={contacto.estado}
+            options={ESTADO_CONTACTO}
+            onChange={(v) => updateContacto({ estado: v })}
+            renderBadge={(v) => <EstadoContactoBadge value={v} />}
+            title="Cambiar estado"
+          />
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl text-ink tracking-tight">
           {contacto.nombre_completo}
