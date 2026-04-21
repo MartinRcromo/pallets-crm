@@ -24,6 +24,7 @@ import {
 } from '../components/ui/Badges'
 import InlineBadgeSelect from '../components/ui/InlineBadgeSelect'
 import InteraccionForm from '../components/InteraccionForm'
+import NewContactModal from '../components/NewContactModal'
 import {
   ArrowLeft,
   Building2,
@@ -58,6 +59,7 @@ export default function EmpresaDetalle() {
   const [tab, setTab] = useState('dossier')
   const [loading, setLoading] = useState(true)
   const [showInter, setShowInter] = useState(false)
+  const [showNewContact, setShowNewContact] = useState(false)
 
   useEffect(() => {
     load()
@@ -106,6 +108,16 @@ export default function EmpresaDetalle() {
       .eq('id', id)
     if (error) throw error
     setEmpresa((prev) => ({ ...prev, ...patch }))
+  }
+
+  const reloadContactos = async () => {
+    const { data } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('company_id', id)
+      .order('es_decisor', { ascending: false })
+      .order('prioridad')
+    setContactos(data ?? [])
   }
 
   if (loading) {
@@ -257,7 +269,12 @@ export default function EmpresaDetalle() {
       {/* CONTENT */}
       {tab === 'dossier' && <DossierTab empresa={empresa} />}
       {tab === 'importaciones' && <ImportacionesTab imports={imports} empresa={empresa} />}
-      {tab === 'contactos' && <ContactosTab contactos={contactos} />}
+      {tab === 'contactos' && (
+        <ContactosTab
+          contactos={contactos}
+          onNew={() => setShowNewContact(true)}
+        />
+      )}
       {tab === 'interacciones' && (
         <InteraccionesTab
           interacciones={interacciones}
@@ -272,6 +289,17 @@ export default function EmpresaDetalle() {
         />
       )}
       {tab === 'tareas' && <TareasTab tareas={tareas} onToggle={load} />}
+
+      {showNewContact && (
+        <NewContactModal
+          companyId={empresa.id}
+          onClose={() => setShowNewContact(false)}
+          onCreated={() => {
+            setShowNewContact(false)
+            reloadContactos()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -414,18 +442,33 @@ function ImportacionesTab({ imports, empresa }) {
   )
 }
 
-function ContactosTab({ contactos }) {
-  if (contactos.length === 0) {
-    return (
-      <div className="card p-8 text-center">
-        <Users size={32} className="mx-auto text-ink/20 mb-3" />
-        <p className="text-sm text-ink/60">Sin contactos cargados.</p>
-      </div>
-    )
-  }
+function ContactosTab({ contactos, onNew }) {
   return (
-    <div className="grid md:grid-cols-2 gap-3">
-      {contactos.map((c) => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-ink/40">
+          {contactos.length} contacto{contactos.length === 1 ? '' : 's'}
+        </div>
+        <button type="button" onClick={onNew} className="btn-rust !text-xs !py-1.5">
+          <Plus size={13} /> Nuevo contacto
+        </button>
+      </div>
+
+      {contactos.length === 0 ? (
+        <div className="card p-8 text-center">
+          <Users size={32} className="mx-auto text-ink/20 mb-3" />
+          <p className="text-sm text-ink/60">Sin contactos cargados.</p>
+          <button
+            type="button"
+            onClick={onNew}
+            className="btn-secondary mt-4 !text-xs"
+          >
+            <Plus size={13} /> Agregar el primero
+          </button>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 gap-3">
+          {contactos.map((c) => (
         <Link
           key={c.id}
           to={`/contactos/${c.id}`}
@@ -451,7 +494,9 @@ function ContactosTab({ contactos }) {
             </div>
           )}
         </Link>
-      ))}
+          ))}
+        </div>
+      )}
     </div>
   )
 }
