@@ -1,11 +1,19 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Building2, ListTodo, LogOut, User2 } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Building2,
+  ListTodo,
+  LogOut,
+  User2,
+  Columns3,
+} from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { cn } from '../lib/utils'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/empresas', label: 'Empresas', icon: Building2 },
+  { to: '/pipeline', label: 'Pipeline', icon: Columns3 },
   { to: '/tareas', label: 'Tareas', icon: ListTodo },
 ]
 
@@ -82,7 +90,7 @@ export default function Layout() {
 
       {/* ----- BOTTOM NAV (mobile) ----- */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-paper/95 backdrop-blur border-t border-ink/10 pb-[env(safe-area-inset-bottom)]">
-        <div className="grid grid-cols-3 h-14">
+        <div className="grid grid-cols-4 h-14">
           {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
