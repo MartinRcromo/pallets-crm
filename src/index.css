@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-feature-settings: "ss01", "ss02";
+  }
+
+  * {
+    @apply border-zinc-200;
+  }
+
+  input, textarea, select, button {
+    font-family: inherit;
+  }
+
+  /* Scrollbar fino */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(212 212 216 / 0.5);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(161 161 170 / 0.6);
+  }
+}
+
+@layer components {
+  /* Prose/markdown styling del dossier */
+  .prose-dossier {
+    @apply text-ink/85 leading-relaxed;
+  }
+  .prose-dossier p {
+    @apply mb-3;
+  }
+  .prose-dossier strong {
+    @apply text-ink font-semibold;
+  }
+  .prose-dossier ul {
+    @apply list-disc list-outside pl-5 mb-3 space-y-1;
+  }
+  .prose-dossier ol {
+    @apply list-decimal list-outside pl-5 mb-3 space-y-1;
+  }
+  .prose-dossier h1, .prose-dossier h2, .prose-dossier h3 {
+    @apply font-serif font-semibold text-ink mt-5 mb-2;
+  }
+  .prose-dossier h1 { @apply text-xl; }
+  .prose-dossier h2 { @apply text-lg; }
+  .prose-dossier h3 { @apply text-base; }
+  .prose-dossier code {
+    @apply bg-zinc-100 px-1 rounded text-sm font-mono;
+  }
+
+  /* Botón primario */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-ink text-paper hover:bg-ink/90 active:bg-ink/80;
+  }
+  .btn-secondary {
+    @apply btn bg-white border border-zinc-300 text-ink hover:bg-zinc-50 active:bg-zinc-100;
+  }
+  .btn-ghost {
+    @apply btn text-ink hover:bg-zinc-100 active:bg-zinc-200;
+  }
+  .btn-rust {
+    @apply btn bg-rust-500 text-white hover:bg-rust-600 active:bg-rust-700;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-3 py-2 rounded-md border border-zinc-300 bg-white text-sm placeholder:text-zinc-400 focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink transition-colors;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white border border-zinc-200 rounded-lg shadow-card;
+  }
+}
