@@ -1,10 +1,12 @@
-// Espejo de los ENUMs de Postgres + labels en español para UI
+// Espejo de los ENUMs de Postgres + labels en español para UI.
+// ⚠️ Los VALUES deben matchear EXACTAMENTE los enums de Supabase.
+// Si cambiás un value acá sin cambiarlo en Postgres (o viceversa), los UPDATE van a fallar.
 
 export const PRIORIDAD_COMERCIAL = [
-  { value: 'critica', label: 'Crítica', order: 4 },
-  { value: 'alta', label: 'Alta', order: 3 },
-  { value: 'media', label: 'Media', order: 2 },
-  { value: 'baja', label: 'Baja', order: 1 },
+  { value: 'critica', label: 'Crítica' },
+  { value: 'alta', label: 'Alta' },
+  { value: 'media', label: 'Media' },
+  { value: 'baja', label: 'Baja' },
 ]
 
 export const CLASIFICACION_EMPRESA = [
@@ -15,14 +17,16 @@ export const CLASIFICACION_EMPRESA = [
   { value: 'por_clasificar', label: 'Por clasificar' },
 ]
 
+// ⚠️ VALUES REALES del enum estado_relacion en Postgres
 export const ESTADO_RELACION = [
-  { value: 'sin_contacto', label: 'Sin contacto' },
+  { value: 'sin_contactar', label: 'Sin contactar' },
+  { value: 'prospect', label: 'Prospect' },
   { value: 'contactado', label: 'Contactado' },
-  { value: 'conversando', label: 'Conversando' },
-  { value: 'propuesta_enviada', label: 'Propuesta enviada' },
+  { value: 'calificado', label: 'Calificado' },
   { value: 'negociando', label: 'Negociando' },
-  { value: 'cliente', label: 'Cliente' },
-  { value: 'perdido', label: 'Perdido' },
+  { value: 'cotizacion_enviada', label: 'Cotización enviada' },
+  { value: 'cerrado_ganado', label: 'Cliente' },
+  { value: 'cerrado_perdido', label: 'Perdido' },
   { value: 'en_pausa', label: 'En pausa' },
 ]
 
@@ -33,13 +37,16 @@ export const PRIORIDAD_CONTACTO = [
   { value: 'baja', label: 'Baja' },
 ]
 
+// ⚠️ VALUES REALES del enum estado_contacto en Postgres
 export const ESTADO_CONTACTO = [
   { value: 'por_contactar', label: 'Por contactar' },
   { value: 'contactado', label: 'Contactado' },
   { value: 'respondio', label: 'Respondió' },
-  { value: 'reunion_agendada', label: 'Reunión agendada' },
-  { value: 'no_responde', label: 'No responde' },
-  { value: 'descartado', label: 'Descartado' },
+  { value: 'interesado', label: 'Interesado' },
+  { value: 'no_interesa', label: 'No interesa' },
+  { value: 'bounce', label: 'Bounce (email rebotó)' },
+  { value: 'cliente', label: 'Cliente' },
+  { value: 'sin_datos', label: 'Sin datos' },
 ]
 
 export const SENIORITY = [
@@ -75,11 +82,13 @@ export const DIRECCION_INTERACCION = [
   { value: 'entrante', label: 'Entrante' },
 ]
 
+// ⚠️ VALUES REALES del enum sentiment_interaccion en Postgres
 export const SENTIMENT = [
+  { value: 'muy_positivo', label: 'Muy positivo' },
   { value: 'positivo', label: 'Positivo' },
   { value: 'neutral', label: 'Neutral' },
   { value: 'negativo', label: 'Negativo' },
-  { value: 'no_aplica', label: 'N/A' },
+  { value: 'no_respondio', label: 'No respondió' },
 ]
 
 export const PRIORIDAD_TASK = [
