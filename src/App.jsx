@@ -10,6 +10,7 @@ import ContactoDetalle from './pages/ContactoDetalle'
 import Tareas from './pages/Tareas'
 import LeadsFrios from './pages/LeadsFrios'
 import Pipeline from './pages/Pipeline'
+import Templates from './pages/Templates'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/tareas" element={<Tareas />} />
           <Route path="/leads-frios" element={<LeadsFrios />} />
           <Route path="/pipeline" element={<Pipeline />} />
+          <Route path="/templates" element={<Templates />} />
         </Route>
       </Routes>
     </AuthProvider>
