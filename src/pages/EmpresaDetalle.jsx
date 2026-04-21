@@ -3,7 +3,15 @@ import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { supabase } from '../lib/supabase'
 import { fmtUSD, fmtDate, fmtDateTime, timeAgo, cn } from '../lib/utils'
-import { labelOf, ESTADO_RELACION, TIPO_INTERACCION, SENTIMENT, SENIORITY } from '../lib/constants'
+import {
+  labelOf,
+  ESTADO_RELACION,
+  TIPO_INTERACCION,
+  SENTIMENT,
+  SENIORITY,
+  PRIORIDAD_COMERCIAL,
+  CLASIFICACION_EMPRESA,
+} from '../lib/constants'
 import {
   PrioridadBadge,
   ClasifBadge,
@@ -14,6 +22,7 @@ import {
   SeniorityChip,
   EstadoContactoBadge,
 } from '../components/ui/Badges'
+import InlineBadgeSelect from '../components/ui/InlineBadgeSelect'
 import InteraccionForm from '../components/InteraccionForm'
 import {
   ArrowLeft,
@@ -90,6 +99,15 @@ export default function EmpresaDetalle() {
     setLoading(false)
   }
 
+  const updateEmpresa = async (patch) => {
+    const { error } = await supabase
+      .from('companies')
+      .update(patch)
+      .eq('id', id)
+    if (error) throw error
+    setEmpresa((prev) => ({ ...prev, ...patch }))
+  }
+
   if (loading) {
     return (
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 text-ink/40 text-sm">
@@ -117,9 +135,27 @@ export default function EmpresaDetalle() {
       {/* HEADER */}
       <header className="mb-6">
         <div className="flex items-start gap-3 mb-3 flex-wrap">
-          <PrioridadBadge value={empresa.prioridad_comercial} size="md" />
-          <ClasifBadge value={empresa.clasificacion} />
-          <EstadoRelacionBadge value={empresa.estado_relacion} />
+          <InlineBadgeSelect
+            value={empresa.prioridad_comercial}
+            options={PRIORIDAD_COMERCIAL}
+            onChange={(v) => updateEmpresa({ prioridad_comercial: v })}
+            renderBadge={(v) => <PrioridadBadge value={v} size="md" />}
+            title="Cambiar prioridad"
+          />
+          <InlineBadgeSelect
+            value={empresa.clasificacion}
+            options={CLASIFICACION_EMPRESA}
+            onChange={(v) => updateEmpresa({ clasificacion: v })}
+            renderBadge={(v) => <ClasifBadge value={v} />}
+            title="Cambiar clasificación"
+          />
+          <InlineBadgeSelect
+            value={empresa.estado_relacion}
+            options={ESTADO_RELACION}
+            onChange={(v) => updateEmpresa({ estado_relacion: v })}
+            renderBadge={(v) => <EstadoRelacionBadge value={v} />}
+            title="Cambiar estado de relación"
+          />
           <SectorChip sector={empresa.sector} />
         </div>
 
