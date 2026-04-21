@@ -83,7 +83,9 @@ export default function EmpresaDetalle() {
         .order('fecha', { ascending: false }),
       supabase
         .from('imports_history')
-        .select('*')
+        .select(
+          'id, fecha_operacion, modelo_importado, marca_importada, origen, cantidad, fob_usd',
+        )
         .eq('company_id', id)
         .order('fecha_operacion', { ascending: false }),
       supabase
@@ -268,7 +270,7 @@ export default function EmpresaDetalle() {
 
       {/* CONTENT */}
       {tab === 'dossier' && <DossierTab empresa={empresa} />}
-      {tab === 'importaciones' && <ImportacionesTab imports={imports} empresa={empresa} />}
+      {tab === 'importaciones' && <ImportacionesTab imports={imports} />}
       {tab === 'contactos' && (
         <ContactosTab
           contactos={contactos}
@@ -383,63 +385,195 @@ function DossierTab({ empresa }) {
   )
 }
 
-function ImportacionesTab({ imports, empresa }) {
+function ImportacionesTab({ imports }) {
   if (imports.length === 0) {
     return (
-      <div className="card p-8 text-center">
-        <PackageOpen size={32} className="mx-auto text-ink/20 mb-3" />
-        <p className="text-sm text-ink/60">
-          No hay registros de importación cargados para {empresa.razon_social}.
-        </p>
-        <p className="text-xs text-ink/40 mt-1">
-          Los datos de aduana se pueden importar a la tabla <code>imports_history</code>.
+      <div className="card p-10 text-center">
+        <PackageOpen size={36} className="mx-auto text-zinc-400 mb-3" />
+        <p className="text-sm text-zinc-400">
+          Sin registros de importación cargados
         </p>
       </div>
     )
   }
+
+  const totalOps = imports.length
+  const totalCantidad = imports.reduce(
+    (s, i) => s + (Number(i.cantidad) || 0),
+    0,
+  )
+  const totalFob = imports.reduce(
+    (s, i) => s + (Number(i.fob_usd) || 0),
+    0,
+  )
+  const marcaTop = modeOf(imports.map((i) => i.marca_importada))
+  const origenTop = modeOf(imports.map((i) => i.origen))
+
   return (
-    <div className="card overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-ink/[0.02] border-b border-ink/10">
-          <tr className="text-left">
-            <th className="px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-ink/50">
-              Fecha
-            </th>
-            <th className="px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-ink/50">
-              NCM
-            </th>
-            <th className="px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-ink/50">
-              Descripción
-            </th>
-            <th className="px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-ink/50">
-              Marca / Origen
-            </th>
-            <th className="px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-ink/50 text-right">
-              FOB USD
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {imports.map((i) => (
-            <tr key={i.id} className="border-b border-ink/5 last:border-0">
-              <td className="px-4 py-2 text-xs">{fmtDate(i.fecha_operacion)}</td>
-              <td className="px-4 py-2 font-mono text-xs">{i.ncm}</td>
-              <td className="px-4 py-2 text-ink/80 max-w-md truncate" title={i.descripcion_producto}>
-                {i.descripcion_producto}
-              </td>
-              <td className="px-4 py-2 text-xs">
-                <div>{i.marca_importada}</div>
-                <div className="text-ink/40">{i.origen}</div>
-              </td>
-              <td className="px-4 py-2 text-right font-mono tabular-nums">
-                {fmtUSD(i.fob_usd)}
-              </td>
+    <div className="space-y-4">
+      <div className="card p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <SummaryKpi label="Operaciones" value={totalOps.toLocaleString('es-AR')} />
+          <SummaryKpi
+            label="Cantidad total"
+            value={totalCantidad.toLocaleString('es-AR')}
+          />
+          <SummaryKpi label="FOB total" value={fmtUSD(totalFob)} />
+          <SummaryKpi label="Marca top" value={marcaTop ?? '—'} mono />
+          <SummaryKpi label="Origen top" value={origenTop ?? '—'} mono />
+        </div>
+      </div>
+
+      {/* Tabla (desktop) */}
+      <div className="card overflow-hidden hidden sm:block">
+        <table className="w-full text-sm">
+          <thead className="bg-ink/[0.02] border-b border-ink/10">
+            <tr className="text-left">
+              <Th>Fecha</Th>
+              <Th>Modelo</Th>
+              <Th>Marca</Th>
+              <Th>Origen</Th>
+              <Th right>Cantidad</Th>
+              <Th right>U.P. USD</Th>
+              <Th right>FOB USD</Th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {imports.map((i) => {
+              const cantidad = Number(i.cantidad) || 0
+              const up = cantidad > 0 ? Number(i.fob_usd) / cantidad : null
+              return (
+                <tr
+                  key={i.id}
+                  className="border-b border-ink/5 last:border-0 hover:bg-zinc-50 transition-colors"
+                >
+                  <td className="px-4 py-2 text-xs text-ink/80 whitespace-nowrap">
+                    {fmtDate(i.fecha_operacion, 'd MMM yyyy')}
+                  </td>
+                  <td className="px-4 py-2 text-xs">
+                    <NullableText value={i.modelo_importado} />
+                  </td>
+                  <td className="px-4 py-2 text-xs">
+                    <NullableText value={i.marca_importada} />
+                  </td>
+                  <td className="px-4 py-2 text-xs text-ink/80">{i.origen ?? '—'}</td>
+                  <td className="px-4 py-2 text-right font-mono tabular-nums text-xs">
+                    {cantidad > 0 ? cantidad.toLocaleString('es-AR') : '—'}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono tabular-nums text-xs">
+                    {up != null
+                      ? up.toLocaleString('es-AR', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-2 text-right font-mono tabular-nums">
+                    {fmtUSD(i.fob_usd)}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Cards (mobile) */}
+      <div className="card divide-y divide-zinc-200 sm:hidden">
+        {imports.map((i) => {
+          const cantidad = Number(i.cantidad) || 0
+          const up = cantidad > 0 ? Number(i.fob_usd) / cantidad : null
+          return (
+            <div key={i.id} className="p-3 space-y-1">
+              <div className="flex items-baseline justify-between gap-2 text-sm font-medium text-ink">
+                <span>{fmtDate(i.fecha_operacion, 'd MMM yyyy')}</span>
+                <span className="font-mono tabular-nums">
+                  {cantidad > 0
+                    ? `${cantidad.toLocaleString('es-AR')} u.`
+                    : '—'}
+                </span>
+              </div>
+              <div className="text-[11px] font-mono text-ink/60 uppercase tracking-wide">
+                <NullableText value={i.modelo_importado} /> —{' '}
+                <NullableText value={i.marca_importada} /> —{' '}
+                {i.origen ?? '—'}
+              </div>
+              <div className="flex items-baseline justify-end gap-3 text-xs font-mono tabular-nums text-ink/80">
+                <span>
+                  U.P.{' '}
+                  {up != null
+                    ? up.toLocaleString('es-AR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })
+                    : '—'}
+                </span>
+                <span className="text-ink font-medium">{fmtUSD(i.fob_usd)}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
+}
+
+function SummaryKpi({ label, value, mono = false }) {
+  return (
+    <div>
+      <div className="text-[9px] font-mono uppercase tracking-widest text-ink/40">
+        {label}
+      </div>
+      <div
+        className={cn(
+          'text-ink mt-1 truncate',
+          mono
+            ? 'font-mono text-sm uppercase tracking-wide'
+            : 'font-serif text-xl tabular-nums',
+        )}
+        title={String(value)}
+      >
+        {value}
+      </div>
+    </div>
+  )
+}
+
+function Th({ children, right = false }) {
+  return (
+    <th
+      className={cn(
+        'px-4 py-2.5 text-[10px] font-mono uppercase tracking-widest text-ink/50',
+        right && 'text-right',
+      )}
+    >
+      {children}
+    </th>
+  )
+}
+
+function NullableText({ value }) {
+  if (value == null || value === '') {
+    return <span className="text-zinc-400">—</span>
+  }
+  return <span className="text-ink/90">{value}</span>
+}
+
+function modeOf(arr) {
+  const freq = new Map()
+  for (const v of arr) {
+    if (v == null || v === '') continue
+    freq.set(v, (freq.get(v) ?? 0) + 1)
+  }
+  let top = null
+  let topCount = 0
+  for (const [k, c] of freq) {
+    if (c > topCount) {
+      top = k
+      topCount = c
+    }
+  }
+  return top
 }
 
 function ContactosTab({ contactos, onNew }) {

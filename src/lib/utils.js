@@ -16,10 +16,10 @@ export const fmtNumber = (n) => {
   return new Intl.NumberFormat('es-AR').format(n)
 }
 
-export const fmtDate = (d) => {
+export const fmtDate = (d, fmtStr = "d 'de' MMM yyyy") => {
   if (!d) return '—'
   try {
-    return format(new Date(d), "d 'de' MMM yyyy", { locale: es })
+    return format(new Date(d), fmtStr, { locale: es })
   } catch {
     return d
   }
