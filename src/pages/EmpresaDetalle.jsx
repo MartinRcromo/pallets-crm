@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { supabase } from '../lib/supabase'
-import { fmtUSD, fmtDate, fmtDateTime, timeAgo, cn } from '../lib/utils'
+import { fmtUSD, fmtDate, fmtDateTime, timeAgo, cn, parseDateOnly } from '../lib/utils'
 import {
   labelOf,
   ESTADO_RELACION,
@@ -448,7 +448,7 @@ function ImportacionesTab({ imports }) {
                   className="border-b border-ink/5 last:border-0 hover:bg-zinc-50 transition-colors"
                 >
                   <td className="px-4 py-2 text-xs text-ink/80 whitespace-nowrap">
-                    {fmtDate(i.fecha_operacion, 'd MMM yyyy')}
+                    {fmtDate(parseDateOnly(i.fecha_operacion), 'd MMM yyyy')}
                   </td>
                   <td className="px-4 py-2 text-xs">
                     <NullableText value={i.modelo_importado} />
@@ -486,7 +486,7 @@ function ImportacionesTab({ imports }) {
           return (
             <div key={i.id} className="p-3 space-y-1">
               <div className="flex items-baseline justify-between gap-2 text-sm font-medium text-ink">
-                <span>{fmtDate(i.fecha_operacion, 'd MMM yyyy')}</span>
+                <span>{fmtDate(parseDateOnly(i.fecha_operacion), 'd MMM yyyy')}</span>
                 <span className="font-mono tabular-nums">
                   {cantidad > 0
                     ? `${cantidad.toLocaleString('es-AR')} u.`
