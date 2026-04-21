@@ -8,9 +8,16 @@ import {
   SectorChip,
   SeniorityChip,
 } from '../components/ui/Badges'
+import InlineBadgeSelect from '../components/ui/InlineBadgeSelect'
+import InlineEditField from '../components/ui/InlineEditField'
 import InteraccionForm from '../components/InteraccionForm'
 import { cn, fmtDateTime, normalizeLinkedIn, toWhatsappNumber } from '../lib/utils'
-import { labelOf, TIPO_INTERACCION } from '../lib/constants'
+import {
+  labelOf,
+  TIPO_INTERACCION,
+  PRIORIDAD_CONTACTO,
+  ESTADO_CONTACTO,
+} from '../lib/constants'
 import {
   ArrowLeft,
   MessageCircle,
@@ -57,6 +64,15 @@ export default function ContactoDetalle() {
     setLoading(false)
   }
 
+  const updateContacto = async (patch) => {
+    const { error } = await supabase
+      .from('contacts')
+      .update(patch)
+      .eq('id', id)
+    if (error) throw error
+    setContacto((prev) => ({ ...prev, ...patch }))
+  }
+
   if (loading)
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 text-ink/40">
@@ -94,8 +110,20 @@ export default function ContactoDetalle() {
       <header className="mb-6">
         <div className="flex flex-wrap items-center gap-1.5 mb-2">
           {contacto.es_decisor && <DecisorPill />}
-          <PrioContactoBadge value={contacto.prioridad} />
-          <EstadoContactoBadge value={contacto.estado} />
+          <InlineBadgeSelect
+            value={contacto.prioridad}
+            options={PRIORIDAD_CONTACTO}
+            onChange={(v) => updateContacto({ prioridad: v })}
+            renderBadge={(v) => <PrioContactoBadge value={v} />}
+            title="Cambiar prioridad"
+          />
+          <InlineBadgeSelect
+            value={contacto.estado}
+            options={ESTADO_CONTACTO}
+            onChange={(v) => updateContacto({ estado: v })}
+            renderBadge={(v) => <EstadoContactoBadge value={v} />}
+            title="Cambiar estado"
+          />
         </div>
         <h1 className="font-serif text-3xl sm:text-4xl text-ink tracking-tight">
           {contacto.nombre_completo}
@@ -180,27 +208,48 @@ export default function ContactoDetalle() {
 
       {/* INFO DETALLE */}
       <section className="grid sm:grid-cols-2 gap-3 mb-8">
-        <InfoRow label="Email" value={contacto.email} />
-        <InfoRow label="Teléfono" value={contacto.telefono} />
-        <InfoRow label="WhatsApp" value={contacto.whatsapp} />
-        <InfoRow
+        <InlineEditField
+          label="Email"
+          value={contacto.email}
+          onSave={(v) => updateContacto({ email: v })}
+          type="email"
+          placeholder="agregar email…"
+        />
+        <InlineEditField
+          label="Teléfono"
+          value={contacto.telefono}
+          onSave={(v) => updateContacto({ telefono: v })}
+          type="tel"
+          placeholder="agregar teléfono…"
+        />
+        <InlineEditField
+          label="WhatsApp"
+          value={contacto.whatsapp}
+          onSave={(v) => updateContacto({ whatsapp: v })}
+          type="tel"
+          placeholder="agregar WhatsApp…"
+        />
+        <InlineEditField
           label="LinkedIn"
-          value={li}
+          value={contacto.linkedin_url}
           link={li}
+          onSave={(v) => updateContacto({ linkedin_url: v })}
+          type="url"
+          placeholder="agregar URL de LinkedIn…"
         />
       </section>
 
       {/* NOTAS */}
-      {contacto.notas && (
-        <section className="card p-4 mb-8">
-          <div className="text-[10px] font-mono uppercase tracking-widest text-ink/40 mb-1">
-            Notas
-          </div>
-          <div className="text-sm text-ink/90 whitespace-pre-wrap">
-            {contacto.notas}
-          </div>
-        </section>
-      )}
+      <section className="mb-8">
+        <InlineEditField
+          label="Notas"
+          value={contacto.notas}
+          onSave={(v) => updateContacto({ notas: v })}
+          multiline
+          rows={5}
+          placeholder="Agregá notas sobre este contacto…"
+        />
+      </section>
 
       {/* INTERACCIONES */}
       <section>
@@ -280,28 +329,3 @@ export default function ContactoDetalle() {
   )
 }
 
-function InfoRow({ label, value, link }) {
-  return (
-    <div className="card p-3">
-      <div className="text-[10px] font-mono uppercase tracking-widest text-ink/40 mb-0.5">
-        {label}
-      </div>
-      {value ? (
-        link ? (
-          <a
-            href={link}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-ink hover:text-rust-600 break-all"
-          >
-            {value}
-          </a>
-        ) : (
-          <div className="text-sm text-ink break-all">{value}</div>
-        )
-      ) : (
-        <div className="text-sm text-ink/30">—</div>
-      )}
-    </div>
-  )
-}

@@ -91,6 +91,12 @@ export const SENTIMENT = [
   { value: 'no_respondio', label: 'No respondió' },
 ]
 
+export const PRIORIDAD_TASK = [
+  { value: 'alta', label: 'Alta' },
+  { value: 'media', label: 'Media' },
+  { value: 'baja', label: 'Baja' },
+]
+
 // Helpers de lookup
 export const labelOf = (list, value) =>
   list.find((x) => x.value === value)?.label ?? value

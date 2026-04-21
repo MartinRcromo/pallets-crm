@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   TIPO_INTERACCION,
   DIRECCION_INTERACCION,
   SENTIMENT,
 } from '../lib/constants'
-import { X, Save } from 'lucide-react'
+import { X, Save, Calendar } from 'lucide-react'
+
+const todayPlus = (days) => {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
 
 export default function InteraccionForm({
   companyId,
@@ -24,6 +30,34 @@ export default function InteraccionForm({
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState(null)
 
+  // Task creation
+  const [crearTarea, setCrearTarea] = useState(false)
+  const [taskDueDate, setTaskDueDate] = useState(() => todayPlus(7))
+  const [taskContactId, setTaskContactId] = useState(contactId ?? '')
+  const [contactosEmpresa, setContactosEmpresa] = useState(null)
+  const [loadingContactos, setLoadingContactos] = useState(false)
+
+  const puedeCrearTarea = proximoPaso.trim().length > 0
+
+  // Lazy-load contactos para el select (solo cuando aparece el bloque y no vino contactId fijo)
+  useEffect(() => {
+    if (!puedeCrearTarea) return
+    if (contactId) return
+    if (contactosEmpresa !== null) return
+    if (!companyId) return
+    setLoadingContactos(true)
+    supabase
+      .from('contacts')
+      .select('id, nombre_completo')
+      .eq('company_id', companyId)
+      .order('es_decisor', { ascending: false })
+      .order('prioridad')
+      .then(({ data }) => {
+        setContactosEmpresa(data ?? [])
+        setLoadingContactos(false)
+      })
+  }, [puedeCrearTarea, contactId, companyId, contactosEmpresa])
+
   const submit = async (e) => {
     e.preventDefault()
     if (!resumen.trim()) {
@@ -34,21 +68,55 @@ export default function InteraccionForm({
     setErr(null)
 
     const { data: { user } } = await supabase.auth.getUser()
+    const resumenLimpio = resumen.trim()
+    const proximoPasoLimpio = proximoPaso.trim() || null
 
-    const { error } = await supabase.from('interactions').insert({
+    const { error: interErr } = await supabase.from('interactions').insert({
       company_id: companyId,
       contact_id: contactId ?? null,
       tipo,
       direccion,
-      resumen: resumen.trim(),
+      resumen: resumenLimpio,
       sentiment,
-      proximo_paso: proximoPaso.trim() || null,
+      proximo_paso: proximoPasoLimpio,
       fecha: new Date(fecha).toISOString(),
       realizada_por: user?.id ?? null,
     })
 
+    if (interErr) {
+      setSaving(false)
+      setErr(interErr.message)
+      return
+    }
+
+    // Crear tarea opcional
+    if (crearTarea && proximoPasoLimpio) {
+      // Mediodía local para evitar que timestamptz cruce el día en AR/BR/CL
+      const dueDateISO = new Date(taskDueDate + 'T12:00:00').toISOString()
+      const taskContact = taskContactId || contactId || null
+
+      const { error: taskErr } = await supabase.from('tasks').insert({
+        company_id: companyId,
+        contact_id: taskContact,
+        titulo: proximoPasoLimpio,
+        descripcion: resumenLimpio.slice(0, 200),
+        due_date: dueDateISO,
+        asignada_a: user?.id ?? null,
+        created_by: user?.id ?? null,
+      })
+
+      setSaving(false)
+      if (taskErr) {
+        setErr(
+          `Interacción guardada, pero no se pudo crear la tarea: ${taskErr.message}`,
+        )
+        return
+      }
+      onSaved?.()
+      return
+    }
+
     setSaving(false)
-    if (error) return setErr(error.message)
     onSaved?.()
   }
 
@@ -122,6 +190,52 @@ export default function InteraccionForm({
           />
         </Field>
       </div>
+
+      {puedeCrearTarea && (
+        <div className="rounded border border-rust-200 bg-rust-50/40 p-3 space-y-3 animate-fade-in">
+          <label className="flex items-center gap-2 text-sm text-ink/90 select-none cursor-pointer">
+            <input
+              type="checkbox"
+              checked={crearTarea}
+              onChange={(e) => setCrearTarea(e.target.checked)}
+              className="accent-rust-500"
+            />
+            <Calendar size={14} className="text-rust-600" />
+            Crear tarea para este próximo paso
+          </label>
+
+          {crearTarea && (
+            <div className="grid sm:grid-cols-2 gap-3">
+              <Field label="Fecha límite">
+                <input
+                  type="date"
+                  value={taskDueDate}
+                  onChange={(e) => setTaskDueDate(e.target.value)}
+                  className="input"
+                  min={todayPlus(0)}
+                />
+              </Field>
+              {!contactId && (
+                <Field label="Contacto (opcional)">
+                  <select
+                    value={taskContactId}
+                    onChange={(e) => setTaskContactId(e.target.value)}
+                    className="input"
+                    disabled={loadingContactos}
+                  >
+                    <option value="">— Sin contacto —</option>
+                    {(contactosEmpresa ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre_completo}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {err && (
         <div className="rounded border border-red-200 bg-red-50 text-red-800 text-sm px-3 py-2">
