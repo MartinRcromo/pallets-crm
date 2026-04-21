@@ -1,13 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { formatDistance } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Search, CheckSquare } from 'lucide-react'
+import { Search, CheckSquare, AlertCircle } from 'lucide-react'
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 import { supabase } from '../lib/supabase'
 import { cn, fmtUSD } from '../lib/utils'
 import {
   PrioridadBadge,
-  SectorChip,
 } from '../components/ui/Badges'
 import {
   ESTADO_RELACION,
@@ -27,16 +37,51 @@ const PIPELINE_ORDER = [
   'en_pausa',
 ]
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(max-width: 767px)').matches
+  })
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const onChange = (e) => setIsMobile(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return isMobile
+}
+
 export default function Pipeline() {
   const [empresas, setEmpresas] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
   const [prioFilter, setPrioFilter] = useState('todas')
   const [q, setQ] = useState('')
+  const [activeId, setActiveId] = useState(null)
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+
+  const isMobile = useIsMobile()
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor),
+  )
 
   useEffect(() => {
     load()
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+    }
   }, [])
+
+  const showToast = (message) => {
+    setToast(message)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), 4000)
+  }
 
   const load = async () => {
     setLoading(true)
@@ -77,8 +122,49 @@ export default function Pipeline() {
     return g
   }, [filtered])
 
-  return (
-    <div className="max-w-[1800px] mx-auto px-4 sm:px-6 py-6 sm:py-10 animate-fade-in">
+  const activeEmpresa = activeId
+    ? empresas.find((e) => e.id === activeId)
+    : null
+
+  const handleDragStart = (event) => {
+    setActiveId(event.active.id)
+  }
+
+  const handleDragCancel = () => {
+    setActiveId(null)
+  }
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event
+    setActiveId(null)
+    if (!over) return
+    const empresa = empresas.find((e) => e.id === active.id)
+    if (!empresa) return
+    const nuevoEstado = over.id
+    if (!PIPELINE_ORDER.includes(nuevoEstado)) return
+    if (nuevoEstado === empresa.estado_relacion) return
+
+    // Optimistic update
+    const prevEmpresas = empresas
+    setEmpresas((list) =>
+      list.map((e) =>
+        e.id === empresa.id ? { ...e, estado_relacion: nuevoEstado } : e,
+      ),
+    )
+
+    const { error } = await supabase
+      .from('companies')
+      .update({ estado_relacion: nuevoEstado })
+      .eq('id', empresa.id)
+
+    if (error) {
+      setEmpresas(prevEmpresas)
+      showToast('No se pudo cambiar estado: ' + error.message)
+    }
+  }
+
+  const header = (
+    <>
       <header className="mb-6">
         <div className="text-[10px] font-mono uppercase tracking-[0.3em] text-ink/40 mb-1">
           Pipeline
@@ -87,7 +173,9 @@ export default function Pipeline() {
           Estado del pipeline
         </h1>
         <p className="text-[11px] font-mono uppercase tracking-widest text-ink/50 mt-2">
-          Empresas agrupadas por estado · cambios desde el detalle de empresa
+          {isMobile
+            ? 'Tocá una empresa para cambiar su estado desde el detalle'
+            : 'Arrastrá una empresa para cambiar su estado · también editable desde el detalle'}
         </p>
       </header>
 
@@ -130,29 +218,70 @@ export default function Pipeline() {
           />
         </div>
       </div>
+    </>
+  )
+
+  const columnsScroll = (
+    <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pb-2">
+      <div className="flex gap-3 items-start min-w-max">
+        {PIPELINE_ORDER.map((key) => (
+          <Column
+            key={key}
+            estado={key}
+            empresas={grouped[key] ?? []}
+            draggable={!isMobile}
+            activeId={activeId}
+          />
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="max-w-[1800px] mx-auto px-4 sm:px-6 py-6 sm:py-10 animate-fade-in">
+      {header}
+
+      {toast && (
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+          <div className="rounded border border-red-200 bg-red-50 text-red-800 text-sm px-4 py-2 shadow-lg flex items-center gap-2">
+            <AlertCircle size={14} />
+            {toast}
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-10 text-ink/40 font-mono text-xs uppercase tracking-widest">
           cargando…
         </div>
+      ) : isMobile ? (
+        columnsScroll
       ) : (
-        <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6 pb-2">
-          <div className="flex gap-3 items-start min-w-max">
-            {PIPELINE_ORDER.map((key) => (
-              <Column
-                key={key}
-                estado={key}
-                empresas={grouped[key] ?? []}
-              />
-            ))}
-          </div>
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          {columnsScroll}
+          <DragOverlay>
+            {activeEmpresa ? (
+              <PipelineCard empresa={activeEmpresa} overlay />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
     </div>
   )
 }
 
-function Column({ estado, empresas }) {
+function Column({ estado, empresas, draggable, activeId }) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: estado,
+    disabled: !draggable,
+  })
+
   return (
     <div className="w-[280px] shrink-0 flex flex-col">
       <div className="flex items-baseline justify-between mb-2 px-1">
@@ -163,22 +292,62 @@ function Column({ estado, empresas }) {
           {empresas.length}
         </span>
       </div>
-      <div className="space-y-2 overflow-y-auto max-h-[70vh] pr-1">
+      <div
+        ref={setNodeRef}
+        className={cn(
+          'space-y-2 overflow-y-auto max-h-[70vh] pr-1 rounded transition-colors',
+          isOver && 'bg-zinc-50 ring-1 ring-rust-300',
+        )}
+      >
         {empresas.length === 0 ? (
           <div className="text-center text-zinc-400 text-sm py-6">—</div>
         ) : (
-          empresas.map((e) => <PipelineCard key={e.id} empresa={e} />)
+          empresas.map((e) =>
+            draggable ? (
+              <DraggableCardWrapper
+                key={e.id}
+                empresa={e}
+                hidden={activeId === e.id}
+              />
+            ) : (
+              <PipelineCard key={e.id} empresa={e} />
+            ),
+          )
         )}
       </div>
     </div>
   )
 }
 
-function PipelineCard({ empresa }) {
+function DraggableCardWrapper({ empresa, hidden }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: empresa.id,
+  })
   return (
-    <Link
-      to={`/empresas/${empresa.id}`}
-      className="card p-3 block hover:border-rust-300 transition-colors animate-slide-up"
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'touch-none',
+        (isDragging || hidden) && 'opacity-30',
+      )}
+      style={{ cursor: 'grab' }}
+    >
+      <PipelineCard empresa={empresa} />
+    </div>
+  )
+}
+
+function PipelineCard({ empresa, overlay = false }) {
+  const body = (
+    <div
+      className={cn(
+        'card p-3 animate-slide-up',
+        overlay
+          ? 'shadow-xl ring-2 ring-rust-400 rotate-1 cursor-grabbing w-[280px]'
+          : 'hover:border-rust-300 transition-colors',
+      )}
     >
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="text-sm font-medium text-ink truncate flex-1 min-w-0">
@@ -203,17 +372,20 @@ function PipelineCard({ empresa }) {
             : 'nunca'}
         </span>
         {empresa.tasks_pendientes > 0 && (
-          <span
-            className={cn(
-              'inline-flex items-center gap-1 rounded bg-rust-50 text-rust-700 px-1.5 py-0.5',
-              'font-mono tabular-nums',
-            )}
-          >
+          <span className="inline-flex items-center gap-1 rounded bg-rust-50 text-rust-700 px-1.5 py-0.5 font-mono tabular-nums">
             <CheckSquare size={10} />
             {empresa.tasks_pendientes}
           </span>
         )}
       </div>
+    </div>
+  )
+
+  if (overlay) return body
+
+  return (
+    <Link to={`/empresas/${empresa.id}`} className="block">
+      {body}
     </Link>
   )
 }
