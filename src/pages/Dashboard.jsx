@@ -4,12 +4,14 @@ import { formatDistance } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { supabase } from '../lib/supabase'
 import { cn, parseDateOnly } from '../lib/utils'
-import { labelOf, TIPO_INTERACCION } from '../lib/constants'
+import { labelOf, TIPO_INTERACCION, ESTADO_RELACION } from '../lib/constants'
+import { PrioridadBadge } from '../components/ui/Badges'
 
 export default function Dashboard() {
   const [kpis, setKpis] = useState(null)
   const [proximasTareas, setProximasTareas] = useState([])
   const [ultimasInter, setUltimasInter] = useState([])
+  const [leadsFriosList, setLeadsFriosList] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
 
@@ -20,7 +22,7 @@ export default function Dashboard() {
   const load = async () => {
     setLoading(true)
     setErr(null)
-    const [kpisRes, tareasRes, interRes] = await Promise.all([
+    const [kpisRes, tareasRes, interRes, friosRes] = await Promise.all([
       supabase.from('v_dashboard_kpis').select('*').maybeSingle(),
       supabase
         .from('tasks')
@@ -37,6 +39,12 @@ export default function Dashboard() {
         )
         .order('fecha', { ascending: false })
         .limit(5),
+      supabase
+        .from('v_leads_frios')
+        .select(
+          'id, razon_social, prioridad_comercial, estado_relacion, dias_sin_actividad',
+        )
+        .limit(5),
     ])
     if (kpisRes.error) {
       setErr(kpisRes.error.message)
@@ -46,6 +54,7 @@ export default function Dashboard() {
     setKpis(kpisRes.data ?? {})
     setProximasTareas(tareasRes.data ?? [])
     setUltimasInter(interRes.data ?? [])
+    setLeadsFriosList(friosRes.data ?? [])
     setLoading(false)
   }
 
@@ -220,7 +229,39 @@ export default function Dashboard() {
           )}
         </Widget>
 
-        <div /> {/* placeholder para tercer widget (próximo commit) */}
+        <Widget
+          title="Leads fríos"
+          linkTo={leadsFrios > 5 ? '/leads-frios' : undefined}
+          linkLabel="Ver todos"
+        >
+          {loading ? (
+            <EmptyHint>cargando…</EmptyHint>
+          ) : leadsFriosList.length === 0 ? (
+            <EmptyHint>Sin leads fríos 🎯</EmptyHint>
+          ) : (
+            <ul className="divide-y divide-ink/5">
+              {leadsFriosList.map((l) => (
+                <li key={l.id}>
+                  <Link
+                    to={`/empresas/${l.id}`}
+                    className="block px-4 py-2.5 hover:bg-ink/[0.02] transition-colors group"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-ink group-hover:text-rust-600 truncate flex-1">
+                        {l.razon_social}
+                      </span>
+                      <PrioridadBadge value={l.prioridad_comercial} />
+                    </div>
+                    <div className="text-[11px] text-rust-700/80 mt-0.5 truncate">
+                      {l.dias_sin_actividad} días sin actividad ·{' '}
+                      {labelOf(ESTADO_RELACION, l.estado_relacion)}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Widget>
       </div>
     </div>
   )
