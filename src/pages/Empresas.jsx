@@ -59,9 +59,7 @@ export default function Empresas() {
     }
     if (filtroPrio !== 'all') xs = xs.filter((e) => e.prioridad_comercial === filtroPrio)
     if (filtroClasif === 'not_excluded') {
-      xs = xs.filter(
-        (e) => e.clasificacion !== 'excluido' && e.clasificacion !== 'competidor',
-      )
+      xs = xs.filter((e) => e.clasificacion === 'usuario_final')
     } else if (filtroClasif !== 'all') {
       xs = xs.filter((e) => e.clasificacion === filtroClasif)
     }
