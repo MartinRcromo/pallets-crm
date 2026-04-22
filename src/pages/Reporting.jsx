@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { ArrowUp, ArrowDown, ArrowRight, RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import {
+  ArrowUp,
+  ArrowDown,
+  ArrowRight,
+  RefreshCw,
+  Columns3,
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { cn } from '../lib/utils'
 
@@ -10,8 +17,19 @@ const WEEKLY_METRICS = [
   { key: 'movimientos_pipeline', label: 'Movimientos pipeline' },
 ]
 
+const FUNNEL_STAGES = [
+  { key: 'lvl_universo', label: 'Universo', prev: null },
+  { key: 'lvl_prospect_o_mas', label: 'Prospect o más', prev: 'lvl_universo' },
+  { key: 'lvl_contactado_o_mas', label: 'Contactado o más', prev: 'lvl_prospect_o_mas' },
+  { key: 'lvl_calificado_o_mas', label: 'Calificado o más', prev: 'lvl_contactado_o_mas' },
+  { key: 'lvl_cotizacion_o_mas', label: 'Cotización o más', prev: 'lvl_calificado_o_mas' },
+  { key: 'lvl_negociando_o_mas', label: 'Negociando o más', prev: 'lvl_cotizacion_o_mas' },
+  { key: 'lvl_ganado', label: 'Ganado', prev: 'lvl_negociando_o_mas' },
+]
+
 export default function Reporting() {
   const [semanal, setSemanal] = useState(null)
+  const [funnel, setFunnel] = useState(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
 
@@ -22,14 +40,15 @@ export default function Reporting() {
   const load = async () => {
     setLoading(true)
     setErr(null)
-    const { data, error } = await supabase
-      .from('v_reporting_semanal')
-      .select('*')
-      .maybeSingle()
-    if (error) {
-      setErr(error.message)
+    const [semRes, funRes] = await Promise.all([
+      supabase.from('v_reporting_semanal').select('*').maybeSingle(),
+      supabase.from('v_funnel_conversion').select('*').maybeSingle(),
+    ])
+    if (semRes.error || funRes.error) {
+      setErr(semRes.error?.message || funRes.error?.message)
     } else {
-      setSemanal(data ?? {})
+      setSemanal(semRes.data ?? {})
+      setFunnel(funRes.data ?? {})
     }
     setLoading(false)
   }
@@ -63,6 +82,29 @@ export default function Reporting() {
                 label={label}
                 current={semanal?.[`${key}_7d`] ?? 0}
                 previous={semanal?.[`${key}_7d_prev`] ?? 0}
+              />
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Funnel de conversión">
+        {loading ? (
+          <FunnelSkeleton />
+        ) : (funnel?.lvl_universo ?? 0) === 0 ? (
+          <FunnelEmpty />
+        ) : (
+          <div className="card p-4 sm:p-6 space-y-2">
+            {FUNNEL_STAGES.map((stage, idx) => (
+              <FunnelRow
+                key={stage.key}
+                label={stage.label}
+                count={Number(funnel[stage.key] ?? 0)}
+                universo={Number(funnel.lvl_universo ?? 0)}
+                prevCount={
+                  stage.prev ? Number(funnel[stage.prev] ?? 0) : null
+                }
+                isFirst={idx === 0}
               />
             ))}
           </div>
@@ -122,6 +164,83 @@ function WeeklyMetric({ label, current, previous }) {
         <Icon size={12} />
         {compLabel}
       </div>
+    </div>
+  )
+}
+
+function FunnelRow({ label, count, universo, prevCount, isFirst }) {
+  const pctUniverso = universo > 0 ? Math.round((count / universo) * 100) : 0
+  const barWidth = universo > 0 ? (count / universo) * 100 : 0
+  const convRate =
+    !isFirst && prevCount > 0 ? Math.round((count / prevCount) * 100) : null
+
+  return (
+    <div className="group py-2">
+      <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+        <div className="w-full sm:w-40 shrink-0 text-[10px] font-mono uppercase tracking-widest text-ink/60">
+          {label}
+        </div>
+        <div className="flex-1 min-w-[160px] h-8 bg-zinc-100 group-hover:bg-zinc-200 transition-colors rounded overflow-hidden relative">
+          <div
+            className="h-full bg-rust-400 transition-all duration-500"
+            style={{ width: `${barWidth}%` }}
+          />
+        </div>
+        <div className="flex items-center gap-3 shrink-0 text-xs sm:text-sm font-mono tabular-nums">
+          <span className="text-ink font-medium w-10 text-right">
+            {count}
+          </span>
+          <span className="text-ink/40 w-14 text-right">
+            ({pctUniverso}%)
+          </span>
+          <span className="text-ink/70 w-16 text-right inline-flex items-center justify-end gap-1">
+            {isFirst ? (
+              <span className="text-ink/30">—</span>
+            ) : convRate == null ? (
+              <span className="text-ink/30">—</span>
+            ) : (
+              <>
+                <ArrowDown size={11} className="text-ink/40" />
+                {convRate}%
+              </>
+            )}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function FunnelSkeleton() {
+  return (
+    <div className="card p-6 space-y-3">
+      {FUNNEL_STAGES.map((s, i) => (
+        <div key={s.key} className="flex items-center gap-3">
+          <div className="w-40 h-3 bg-zinc-100 rounded animate-pulse" />
+          <div
+            className="flex-1 h-8 bg-zinc-100 rounded animate-pulse"
+            style={{ opacity: 1 - i * 0.1 }}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function FunnelEmpty() {
+  return (
+    <div className="card p-10 text-center">
+      <Columns3 size={32} className="mx-auto text-zinc-400 mb-3" />
+      <p className="font-serif text-lg text-ink">
+        Sin datos suficientes para reportar
+      </p>
+      <p className="text-sm text-ink/50 mt-1">
+        Empezá a mover empresas en el{' '}
+        <Link to="/pipeline" className="underline hover:text-rust-600">
+          Pipeline
+        </Link>{' '}
+        para ver métricas de conversión.
+      </p>
     </div>
   )
 }
