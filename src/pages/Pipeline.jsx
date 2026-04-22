@@ -91,7 +91,7 @@ export default function Pipeline() {
       .select(
         'id, razon_social, prioridad_comercial, clasificacion, estado_relacion, sector, fob_usd_12m, ultima_interaccion, contactos_total, tasks_pendientes',
       )
-      .not('clasificacion', 'in', '(competidor,excluido)')
+      .eq('clasificacion', 'usuario_final')
     if (error) {
       setErr(error.message)
       setLoading(false)
