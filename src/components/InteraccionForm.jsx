@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   TIPO_INTERACCION,
   DIRECCION_INTERACCION,
   SENTIMENT,
 } from '../lib/constants'
-import { X, Save, Calendar } from 'lucide-react'
+import { X, Save, Calendar, ClipboardList, Check } from 'lucide-react'
+import TemplatePickerModal from './TemplatePickerModal'
 
 const todayPlus = (days) => {
   const d = new Date()
@@ -36,6 +37,40 @@ export default function InteraccionForm({
   const [taskContactId, setTaskContactId] = useState(contactId ?? '')
   const [contactosEmpresa, setContactosEmpresa] = useState(null)
   const [loadingContactos, setLoadingContactos] = useState(false)
+
+  // Template picker
+  const [showPicker, setShowPicker] = useState(false)
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+    }
+  }, [])
+
+  const showToast = (message) => {
+    setToast(message)
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), 4000)
+  }
+
+  const handleTemplatePicked = async (template) => {
+    const payload = template.asunto
+      ? `Asunto: ${template.asunto}\n\n${template.cuerpo}`
+      : template.cuerpo
+    try {
+      await navigator.clipboard.writeText(payload)
+      showToast(
+        'Plantilla copiada. Reemplazá las variables y pegá en LinkedIn/email.',
+      )
+    } catch {
+      showToast(
+        'No se pudo copiar automáticamente. Copialo a mano desde la biblioteca.',
+      )
+    }
+    setShowPicker(false)
+  }
 
   const puedeCrearTarea = proximoPaso.trim().length > 0
 
@@ -121,6 +156,7 @@ export default function InteraccionForm({
   }
 
   return (
+    <>
     <form
       onSubmit={submit}
       className="card p-5 space-y-4 animate-slide-up border-rust-200"
@@ -161,6 +197,20 @@ export default function InteraccionForm({
           className="input"
         />
       </Field>
+
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowPicker(true)}
+          className="btn-secondary !text-xs !py-1.5"
+        >
+          <ClipboardList size={13} />
+          Usar plantilla
+        </button>
+        <span className="text-[10px] font-mono uppercase tracking-widest text-ink/40">
+          copia mensaje al portapapeles
+        </span>
+      </div>
 
       <Field label="Resumen *">
         <textarea
@@ -253,6 +303,24 @@ export default function InteraccionForm({
         </button>
       </div>
     </form>
+
+    {showPicker && (
+      <TemplatePickerModal
+        tipo={tipo}
+        onPicked={handleTemplatePicked}
+        onClose={() => setShowPicker(false)}
+      />
+    )}
+
+    {toast && (
+      <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+        <div className="rounded border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm px-4 py-2 shadow-lg flex items-center gap-2 max-w-md">
+          <Check size={14} />
+          {toast}
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 

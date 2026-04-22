@@ -6,6 +6,7 @@ import {
   LogOut,
   User2,
   Columns3,
+  FileText,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { cn } from '../lib/utils'
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/empresas', label: 'Empresas', icon: Building2 },
   { to: '/pipeline', label: 'Pipeline', icon: Columns3 },
   { to: '/tareas', label: 'Tareas', icon: ListTodo },
+  { to: '/templates', label: 'Plantillas', icon: FileText },
 ]
 
 export default function Layout() {
@@ -90,7 +92,7 @@ export default function Layout() {
 
       {/* ----- BOTTOM NAV (mobile) ----- */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-paper/95 backdrop-blur border-t border-ink/10 pb-[env(safe-area-inset-bottom)]">
-        <div className="grid grid-cols-4 h-14">
+        <div className="grid grid-cols-5 h-14">
           {navItems.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
