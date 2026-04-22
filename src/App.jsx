@@ -11,6 +11,7 @@ import Tareas from './pages/Tareas'
 import LeadsFrios from './pages/LeadsFrios'
 import Pipeline from './pages/Pipeline'
 import Templates from './pages/Templates'
+import Reporting from './pages/Reporting'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="/leads-frios" element={<LeadsFrios />} />
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/templates" element={<Templates />} />
+          <Route path="/reporting" element={<Reporting />} />
         </Route>
       </Routes>
     </AuthProvider>
