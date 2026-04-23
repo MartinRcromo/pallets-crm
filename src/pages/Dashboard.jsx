@@ -135,8 +135,8 @@ export default function Dashboard() {
           label="Empresas tocadas 7d"
           value={kpis?.empresas_tocadas_7d}
           sub={
-            kpis?.empresas_sin_contactar != null
-              ? `de ${kpis.empresas_sin_contactar} prospectables`
+            kpis?.empresas_prospectables_total != null
+              ? `de ${kpis.empresas_prospectables_total} prospectables`
               : '—'
           }
           loading={loading}
